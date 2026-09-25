@@ -1,3 +1,6 @@
 __pycache__/
 .env
 .venv
+
+# Office temp/lock files
+~$*
