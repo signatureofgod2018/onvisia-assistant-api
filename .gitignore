@@ -4,3 +4,4 @@ __pycache__/
 
 # Office temp/lock files
 ~$*
+.claude/settings.local.json
