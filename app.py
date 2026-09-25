@@ -29,7 +29,7 @@ credential=DefaultAzureCredential()
 openai_client = project_client.get_openai_client()
  
 AGENT_NAME = "Onvisia-Knowledge-Assistant"
-AGENT_VERSION = "5"
+AGENT_VERSION = "6"
  
  
 @app.route("/", methods=["GET"])
