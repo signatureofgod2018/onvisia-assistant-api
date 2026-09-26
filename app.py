@@ -35,6 +35,36 @@ AGENT_VERSION = "6"
 # Matches agent citation markers such as 【4:0†Some Document.pdf】
 CITATION_PATTERN = re.compile(r"\s*【[^】]*】")
 
+# Conversation history limits (keeps cost and abuse in check).
+MAX_HISTORY_TURNS = 20
+MAX_CONTENT_CHARS = 4000
+ALLOWED_ROLES = {"user", "assistant"}
+
+
+def build_input(message, history):
+    """Build the agent input from prior turns plus the current message.
+
+    Only user/assistant turns are accepted, so callers cannot inject
+    system or developer instructions.
+    """
+    turns = []
+    if isinstance(history, list):
+        for item in history:
+            if not isinstance(item, dict):
+                continue
+            role = item.get("role")
+            content = item.get("content")
+            if role in ALLOWED_ROLES and isinstance(content, str) and content.strip():
+                turns.append({"role": role, "content": content[:MAX_CONTENT_CHARS]})
+
+    message = message.strip()[:MAX_CONTENT_CHARS] if isinstance(message, str) else ""
+
+    # The UI may already include the current message as the last history turn.
+    if message and not (turns and turns[-1] == {"role": "user", "content": message}):
+        turns.append({"role": "user", "content": message})
+
+    return turns[-MAX_HISTORY_TURNS:]
+
 
 @app.route("/", methods=["GET"])
 def health():
@@ -49,17 +79,19 @@ def health():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json(force=True, silent=True)
+        if not isinstance(data, dict):
+            data = {}
 
-        message = data.get("message", "")
+        turns = build_input(data.get("message", ""), data.get("messages"))
+
+        if not turns or turns[-1]["role"] != "user":
+            return jsonify({
+                "reply": "Please enter a question."
+            }), 400
 
         response = openai_client.responses.create(
-            input=[
-                {
-                    "role": "user",
-                    "content": message
-                }
-            ],
+            input=turns,
             extra_body={
                 "agent_reference": {
                     "name": AGENT_NAME,
