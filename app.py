@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -30,6 +31,9 @@ openai_client = project_client.get_openai_client()
 
 AGENT_NAME = "Onvisia-Knowledge-Assistant"
 AGENT_VERSION = "6"
+
+# Matches agent citation markers such as 【4:0†Some Document.pdf】
+CITATION_PATTERN = re.compile(r"\s*【[^】]*】")
 
 
 @app.route("/", methods=["GET"])
@@ -65,8 +69,11 @@ def chat():
             }
         )
 
+        # Strip citation markers so internal document names are not exposed.
+        reply = CITATION_PATTERN.sub("", response.output_text).strip()
+
         return jsonify({
-            "reply": response.output_text
+            "reply": reply
         })
 
     except Exception:
