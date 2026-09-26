@@ -69,10 +69,12 @@ def chat():
             "reply": response.output_text
         })
 
-    except Exception as ex:
+    except Exception:
+        # Log full details server-side (visible in App Service Log stream);
+        # never return internal error text to callers.
+        app.logger.exception("Chat request failed")
         return jsonify({
-            "reply": "Assistant error.",
-            "error": str(ex)
+            "reply": "Assistant error."
         }), 500
 
 
